@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+
+	<Properties>
+		<Property name="APP_NAME">api-token</Property>
+        <Property name="LOG_DIR">logs</Property>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+        <Property name="LOG_PATTERN_COLOR">%d{HH:mm:ss.SSS} %highlight{%-5level}{FATAL=red blink, ERROR=red, WARN=yellow, INFO=green, DEBUG=cyan, TRACE=white} %style{[%t]}{magenta} %logger{36} - %msg%n</Property>
+        <Property name="MAX_FILE_SIZE">10 MB</Property>
+        <Property name="MAX_HISTORY">30</Property>
+	</Properties>
+
+	<Appenders>
+	
+	    <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN_COLOR}" />
+            <!-- Filtro: solo INFO o superior en consola -->
+            <ThresholdFilter level="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Console>
+	
+		<RollingFile name="api-logger" fileName="${LOG_DIR}/${APP_NAME}.log">
+            <PatternLayout pattern="${LOG_PATTERN}" />
+            <Policies>
+                <!-- Rota cuando arranca la aplicación -->
+                <OnStartupTriggeringPolicy />
+                <!-- Rota cada día (basado en el patrón de fecha en filePattern) -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <!-- Rota cuando el archivo alcanza el tamaño máximo -->
+                <SizeBasedTriggeringPolicy size="${MAX_FILE_SIZE}" />
+            </Policies>
+            <!-- Máximo 30 archivos rotados, luego borra los más antiguos -->
+            <DefaultRolloverStrategy max="${MAX_HISTORY}">
+                <!-- Borra archivos de más de 30 días -->
+                <Delete basePath="${LOG_DIR}/archive" maxDepth="1">
+                    <IfFileName glob="${APP_NAME}-*.log.gz" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+		
+
+	</Appenders>
+	<Loggers>
+		<Root level="all" additivity="false">
+			<appender-ref ref="console" />
+			<appender-ref ref="api-logger" />
+		</Root>
+	</Loggers>
+</Configuration>

@@ -1,0 +1,21 @@
+listener:
+   gear:
+     #worker: worker configuration 
+     #port: default port 8000		    
+     #size: worker size
+     #buffer-size: buffer size for receiving external data
+     #listen-timewait: timeout for listening to a request
+     #timeout-waiting-buffer: timeout for listening to parts of a message a request
+      worker:
+         port: 8000
+         size: 1000
+         session-life: 3600
+         buffer-size: 3000000
+         listen-timewait: 100
+         timeout-waiting-buffer: 2
+         
+      content:
+         directory:
+         onload:
+            name:
+            template:           

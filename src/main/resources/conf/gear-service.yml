@@ -1,0 +1,21 @@
+apis:
+   nodes:
+      name-api: #debe ser modificado por el nombre real de la api
+         method: GET
+         active: true
+         classname: com.apiseries.api.sii.controller.Controller
+         #PLAIN,HEX,XOR,ASIMETRIC,3DES,ASIMETRIC/HEX,3DES/HEX,ASIMETRIC/XOR,3DES/XOR 
+         encrypted: PLAIN
+         dependencies:
+            dependency:
+               name: geardb
+               classname: com.gear.tools.xml.core.YAMLReader
+               method: addDB
+         healthcheck:
+            health: true
+            health-classname: com.gear.healthcheck.controller.Health
+            props: true
+            props-classname: com.gear.healthcheck.controller.Props
+            env: true
+            env-classname: com.gear.healthcheck.controller.Env
+            

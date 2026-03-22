@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jdbc>
+<include file="environment.xml"/>
+
+   <sqlite-saf-discover>
+      <url>${sys:}</url>
+	  <class>${sys:}</class>
+	  <user>${sys:}</user> 
+	  <password>${sys:}</password>
+   	  <query></query>
+	  <field></field>
+	  <field></field>
+	  <field></field>
+   </sqlite-saf-discover>
+
+   <db2-sp-discover>
+      <url>${sys:}</url>
+	  <class>${sys:}</class>
+	  <user>${sys:}</user> 
+	  <password>${sys:}</password>
+	  <call></call>
+	  <timeout>30</timeout>
+   	  <field name="xxx" type="java.sql.Types.CHAR" length="0" parameter="in">1</field>
+   	  <field name="xxx" type="java.sql.Types.CHAR" length="0" parameter="inout">2</field>
+	  <field name="xxx" type="java.sql.Types.CHAR" length="0" parameter="out">3</field>
+   </db2-sp-discover>
+
+</jdbc>

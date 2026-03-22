@@ -1,0 +1,33 @@
+security:
+   ssl: off
+   # Content-Type: tipo de contenido entrante
+   # Accept: Tipo de contenido para la respuesta
+   # Authorization: 
+   # Content-Gear-Hash: Hash calculado desde el cliente  
+   # Apikey: Apikey del servicio 
+   # Security-Gear-Id: None 
+   # X-Encrypted: true or false       
+   headers:
+      header-field: Content-Type,Accept,Authorization,Content-Gear-Hash,Apikey,Security-Gear-Id
+      #header-values: {auto-generate},{auto-generate},{auto-generate},{auto-generate},{auto-generate},{auto-generate}
+      Content-Type: application/x-xor-encrypted,application/x-hexa-message,application/json,application/xml,text/plain,text/xml,application/graphql
+      
+   message:
+      hashing-type: SHA-512
+      len-sec: 2048
+      
+   hash-header: Content-Gear-Hash
+   authorization:
+      header: Authorization
+      verify: false
+   
+   keystore: ${sys:${env:ENVIRONMENT}.ssl.KEYSTORE_PATH}
+   keystore-pass: ${sys:${env:ENVIRONMENT}.ssl.KEYSTORE_PASS}
+   
+   repository:
+      path: ${sys:${env:ENVIRONMENT}.security.SECURITYPATH}
+   
+   jwt:
+      verify: false
+      session-time: 900000
+      refresh-time: 604800000

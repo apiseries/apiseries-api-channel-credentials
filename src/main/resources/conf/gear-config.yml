@@ -1,0 +1,49 @@
+#
+# Mongodb
+#
+mongodb:
+   sii-list:
+      #mode: sync, async
+      mode: sync
+      url: ${sys:${env:ENVIRONMENT}.mongodb.MONGODB_URL}
+      database: ${sys:${env:ENVIRONMENT}.mongodb.MONGODB_DATABASE}
+      collection: ${sys:${env:ENVIRONMENT}.mongodb.MONGODB_COLLECTION}
+      timeout: 5
+      query: {}
+      filter:
+      sort: false
+      limit: 0
+     
+#
+# smtp
+#
+smtp:
+   hostname:
+   port:
+   username:
+   password:
+   from:
+   templates:
+      sii-list:
+         from:
+         from_title:
+         subject:
+         field:
+         field:
+         field:
+      
+#
+# mailjet
+#
+mailjet:
+   apikey:
+   secretkey:      
+   templates:
+      sii-list:
+         from:
+         from_title:
+         subject:
+         field:
+         field:
+         field:
+      

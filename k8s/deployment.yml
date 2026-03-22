@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apiseries-api-token
+  labels:
+    app: apiseries-api-token
+spec:
+  replicas: 1  # Número de copias del pod
+  selector:
+    matchLabels:
+      app: apiseries-api-token
+  template:
+    metadata:
+      labels:
+        app: apiseries-api-token
+    spec:
+      containers:
+      - name: apiseries-api-token
+        image: apiseries-api-token  # Debe coincidir con tu imagen local
+        imagePullPolicy: IfNotPresent  # Importante: No intenta bajar de internet si ya está local
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        # Opcional: Health checks
+        livenessProbe:
+          httpGet:
+            path: /apis/nodes/token/healthcheck/health  # Cambia a tu endpoint de salud
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
