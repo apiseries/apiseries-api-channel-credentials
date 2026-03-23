@@ -21,7 +21,7 @@ NC='\033[0m'
 
 # Definir lista de variables permitidas
 VARS_PERMITIDAS=("GEAR_SERVER" "GEAR_SECURITY" "GEAR_SERVICE" "GEAR_HTTP" "GEAR_CONFIG" "GEAR_DB" "GEAR_SECRETS" "APINAME" "ENVIRONMENT")
-security_dir="./security"
+security_dir="./src/main/resources/security"
 keygen_dir="keygen"
 ssl_dir="ssl"
 
@@ -211,6 +211,7 @@ function mkcert {
    
 	   if [ -f $security_dir/$ssl_dir/.apiseries.p12 ]; then
 
+            echo "sudo mkcert localhost 127.0.0.1 ::1"
             sudo mkcert localhost 127.0.0.1 ::1
             echo "Certificado creado OK"
             
@@ -536,6 +537,16 @@ fi
 
 
 if [ "$1" == "ssl" ]; then
+
+
+
+	if [ ! -d "$security_dir" ]; then
+	     mkdir "$security_dir"
+	fi 
+
+	if [ ! -d "$security_dir/$ssl_dir" ]; then
+	     mkdir "$security_dir/$ssl_dir"
+	fi 
 
 
      while true; do

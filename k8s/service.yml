@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: apiseries-api-token
+  name: apiseries-api-channel-credentials
 spec:
   selector:
-    app: apiseries-api-token
+    app: apiseries-api-channel-credentials
   ports:
     - protocol: TCP
       port: 80       # Puerto expuesto por el servicio

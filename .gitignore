@@ -6,6 +6,7 @@ target/
 .mvn/*.*
 **/src/main/**/logs/**
 **/src/main/**/logs/archive/*.*
+**/src/main/resources/security/keygen/*.jar
 
 ### STS ###
 .apt_generated

@@ -13,6 +13,6 @@ spec:
         pathType: ImplementationSpecific
         backend:
           service:
-            name: apiseries-api-token
+            name: apiseries-api-channel-credentials
             port:
               number: 8000
