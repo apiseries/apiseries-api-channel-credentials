@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.apiseries.api.service;
+package com.apiseries.api.channel.service;
 
 import java.util.HashMap;
 
@@ -10,8 +10,8 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import com.apiseries.api.exception.APIException;
-import com.apiseries.api.implement.NoSQLAccessImplement;
+import com.apiseries.api.channel.exception.APIException;
+import com.apiseries.api.channel.implement.NoSQLAccessImplement;
 import com.gear.nosql.core.ManagerAdapter;
 import com.gear.nosql.mongo.MongoDBAdapter;
 import com.gear.tools.yaml.core.YAMLReader;
@@ -37,7 +37,7 @@ public class Service implements NoSQLAccessImplement {
     * return void	
     */
 	@Override
-	public void addDB(YAMLReader x) {this.geardb = x;}
+	public void addDB(YAMLReader x) {this.geardb = x; this.logger.debug("this.geardb instanceof " + (x instanceof YAMLReader));}
 
    /**
     * addSecurity
@@ -45,7 +45,7 @@ public class Service implements NoSQLAccessImplement {
     *  @param YAMLReader	
     */
 	@Override
-	public void addSecurity(YAMLReader x) {this.gearsecurity = x;}
+	public void addSecurity(YAMLReader x) {this.gearsecurity = x;this.logger.debug("this.gearsecurity instanceof " + (x instanceof YAMLReader));}
 
    /**
     * isDb
@@ -68,16 +68,13 @@ public class Service implements NoSQLAccessImplement {
 	     adapter.addConfig(this.geardb);
 
 	     ManagerAdapter.getInstance().setAdapter(adapter);
-      	 ManagerAdapter.getInstance().findById("mongo." + service);
+      	 ManagerAdapter.getInstance().findById("mongodb." + service);
       	 
 		 HashMap<String, Object> registry = new HashMap<>();
-      	 registry.put("values", this.geardb.getString("mongo." + service + ".query"));
-
  		 String json = ManagerAdapter.getInstance().find(registry);
       	 JSONArray container = new JSONArray(json);
-      	 JSONObject response = container.getJSONObject(0);
 		
-    return response;
+    return container;
 	}
 	catch (Exception e) {throw new APIException(e);}
 	}//end-method

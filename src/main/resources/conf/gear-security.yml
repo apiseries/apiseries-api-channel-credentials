@@ -9,7 +9,7 @@ security:
    # Security-Gear-Id: None 
    # X-Encrypted: true or false       
    headers:
-      header-field: Content-Type,Accept,Authorization,Content-Gear-Hash,Apikey,Security-Gear-Id
+      header-field: Content-Type,Accept,Authorization,Content-Gear-Hash
       #header-values: {auto-generate},{auto-generate},{auto-generate},{auto-generate},{auto-generate},{auto-generate}
       Content-Type: application/x-xor-encrypted,application/x-hexa-message,application/json,application/xml,text/plain,text/xml,application/graphql
       

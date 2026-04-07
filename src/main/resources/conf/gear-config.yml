@@ -2,15 +2,16 @@
 # Mongodb
 #
 mongodb:
-   sii-list:
+   channel-credentials:
       #mode: sync, async
       mode: sync
       url: ${sys:${env:ENVIRONMENT}.mongodb.MONGODB_URL}
       database: ${sys:${env:ENVIRONMENT}.mongodb.MONGODB_DATABASE}
       collection: ${sys:${env:ENVIRONMENT}.mongodb.MONGODB_COLLECTION}
       timeout: 5
-      query: {}
-      filter:
+      query: "{}"
+      filter: ""
       sort: false
       limit: 0
+      include: sii
      

@@ -1,4 +1,10 @@
-FROM eclipse-temurin:21-jre-alpine AS builder
+FROM eclipse-temurin:21-jre-alpine AS runtime
+
+# Instalar solo lo mínimo necesario
+RUN apk add --no-cache tzdata curl \
+    && cp /usr/share/zoneinfo/America/Santiago /etc/localtime \
+    && echo "America/Santiago" > /etc/timezone \
+    && apk del tzdata
 
 # ── Working directory ────────────────────────────────────────
 WORKDIR /app
@@ -24,6 +30,7 @@ COPY src/main/resources/security/ssl/.apiseries.p12 /app/security/
 COPY src/main/resources/security/keygen/*_3DES_PUB.pem /app/security/keygen/
 COPY src/main/resources/security/keygen/*_ASIMETRIC_PRI.pem /app/security/keygen/
 COPY src/main/resources/security/keygen/*_ASIMETRIC_PUB.pem /app/security/keygen/
+COPY src/main/resources/security/keygen/jwt.pem /app/security/keygen/
 COPY gear.sh /app/
 COPY src/main/resources/log4j2.xml /app/
 COPY src/main/resources/conf/database.xml /app/conf/
@@ -45,7 +52,7 @@ RUN chmod -R 550 /app/conf \
 # ── Application ──────────────────────────────────────────────
 ENV APINAME=channel-credentials
 ENV NS_API=api.apiseries.com
-ENV APP_PORT="8000"
+ENV APP_PORT="8001"
 ENV ENVIRONMENT=dev
 
 # ── Application ──────────────────────────────────────────────

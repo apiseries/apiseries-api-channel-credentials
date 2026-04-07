@@ -21,7 +21,7 @@
  *       Gaston Quezada - Creador de la api adapter-YYYYMM.VV.FF.jar
  * </pre>
  *******************************************************************************/
-package com.apiseries.api.exception;
+package com.apiseries.api.channel.exception;
 
 /**
  * @author Gaston Quezada

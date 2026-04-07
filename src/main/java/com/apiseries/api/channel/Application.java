@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.apiseries.api;
+package com.apiseries.api.channel;
 
 /**
  * 

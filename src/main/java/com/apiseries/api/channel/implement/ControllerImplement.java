@@ -1,9 +1,9 @@
 /**
  * 
  */
-package com.apiseries.api.implement;
+package com.apiseries.api.channel.implement;
 
-import com.apiseries.api.exception.APIException;
+import com.apiseries.api.channel.exception.APIException;
 import com.apiseries.gear.mapper.RequestMapper;
 
 /**

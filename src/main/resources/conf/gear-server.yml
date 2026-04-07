@@ -7,7 +7,7 @@ listener:
      #listen-timewait: timeout for listening to a request
      #timeout-waiting-buffer: timeout for listening to parts of a message a request
       worker:
-         port: 8000
+         port: 8001
          size: 1000
          session-life: 3600
          buffer-size: 3000000

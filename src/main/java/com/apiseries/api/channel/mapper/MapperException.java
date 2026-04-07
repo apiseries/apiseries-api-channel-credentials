@@ -1,14 +1,14 @@
 /**
  * 
  */
-package com.apiseries.api.mapper;
+package com.apiseries.api.channel.mapper;
 
 import com.gear.tools.function.JSONInclude;
 
 /**
  * 
  */
-public class MapperSuccess {
+public class MapperException {
 	
 	@JSONInclude(key="status") private int status = 0;
 	@JSONInclude(key="message") private String message = null;

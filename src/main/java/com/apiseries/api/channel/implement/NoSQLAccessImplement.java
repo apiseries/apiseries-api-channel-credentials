@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.apiseries.api.implement;
+package com.apiseries.api.channel.implement;
 
 import com.gear.tools.yaml.core.YAMLReader;
 

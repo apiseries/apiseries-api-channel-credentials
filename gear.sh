@@ -1,9 +1,16 @@
 #!/bin/bash
 
-#LIB=$(for i in lib/*.jar; do echo $i: ;done)
-#LIBRARY=`echo $LIB | tr -d ' '`
+#
+#
+# VARS and folders project
+#
+#
+VARS_PERMITIDAS=("GEAR_SERVER" "GEAR_SECURITY" "GEAR_SERVICE" "GEAR_HTTP" "GEAR_CONFIG" "GEAR_DB" "GEAR_SECRETS" "APINAME" "ENVIRONMENT")
+conf_dir="src/main/resources/conf"
+security_dir="src/main/resources/security"
+keygen_dir="keygen"
+ssl_dir="ssl"
 
-# Definir colores
 RED='\033[31m'
 GREEN='\033[32m'
 YELLOW='\033[33m'
@@ -18,14 +25,12 @@ GREEN_BACK='\033[42m'
 
 NC='\033[0m'
 
-
-# Definir lista de variables permitidas
-VARS_PERMITIDAS=("GEAR_SERVER" "GEAR_SECURITY" "GEAR_SERVICE" "GEAR_HTTP" "GEAR_CONFIG" "GEAR_DB" "GEAR_SECRETS" "APINAME" "ENVIRONMENT")
-security_dir="./src/main/resources/security"
-keygen_dir="keygen"
-ssl_dir="ssl"
-
+#
+# function: java_version
+# detail: verify installed JVM and install if not available
+#
 function java_version {
+
     # 1. Check if Java 21 is already installed
 	if java -version 2>&1 | grep -q "21\."; then
 	    echo "Java 21 is already installed."
@@ -52,6 +57,10 @@ function java_version {
 	fi
 }
 
+#
+# function: env
+# detail: verify ENV variables for execute API
+#
 function env {
 
 	echo "${YELLOW}1. Verificando variables de entorno...${NC}"
@@ -106,7 +115,10 @@ function env {
 
 }
 
-# Función para configurar una variable de entorno permitida
+#
+# function: jave_version
+# detail: verify installed JVM and install if not available
+#
 function configurar_variable {
 	
     read -p "Introduce el nombre de la variable: " NOMBRE_VAR
@@ -241,6 +253,25 @@ function keystore {
 	
 }
 
+function ecosystem {
+
+for dir in ../apiseries-api*; do
+    if [ -d "$dir" ]; then
+    
+       if [ -f $dir/.gear ];then
+           echo "Gear project detected"
+	       cp ${security_dir}/$keygen_dir/jwt.pem $dir/src/main/resources/security/$keygen_dir/
+	       ls -l $dir/src/main/resources/security/$keygen_dir/jwt.pem
+	       echo "________________________________________"
+       fi
+       
+    fi
+done    
+    
+    
+}
+
+
 
 if [ "$1" == "start" ]; then
 
@@ -265,6 +296,10 @@ nohup java -Dgear-server=$GEAR_SERVER \
       echo $! > process.pid
 fi
 
+
+#--------------------------------------------------------------------------------------
+
+
 if [ "$1" == "stop" ]; then
 
 echo "█  ▄ ▄ █ █" 
@@ -273,7 +308,10 @@ echo "█ ▀▄ █ █ █"
 echo "█  █ █ █ █" 
 
         kill -9 `cat process.pid`
+        rm -f process.pid
 fi
+
+#--------------------------------------------------------------------------------------
 
 if [ "$1" == "status" ]; then
 
@@ -294,6 +332,8 @@ echo "/_/"
 	   echo "El proceso NO está en ejecución."
 	fi
 fi
+
+#--------------------------------------------------------------------------------------
 
 
 if [ "$1" == "run" ]; then
@@ -317,27 +357,31 @@ java -Dgear-server=$GEAR_SERVER \
      -jar ../../../target/apiseries-api.jar
 fi
 
+#--------------------------------------------------------------------------------------
 
-if [ "$1" == "healthcheck" ]; then
+
+if [ "$1" == "health" ]; then
 
             
-echo "     ███"    
-echo "    ▒███"    
-echo " ███████████"
-echo "▒▒▒▒▒███▒▒▒" 
-echo "    ▒███"    
-echo "    ▒▒▒"   
+echo "${RED}     ███${NC}"    
+echo "${RED}    ▒███${NC}"    
+echo "${RED} ███████████${NC}"
+echo "${RED}▒▒▒▒▒███▒▒▒${NC}" 
+echo "${RED}    ▒███${NC}"    
+echo "${RED}    ▒▒▒${NC}"   
 
-    echo ${APINAME}
-	response=$(curl -s http://localhost:8000/apis/nodes/$(echo ${APINAME})/healthcheck/health)
+    DOCKER_PORT=`grep 'port:' $conf_dir/gear-server.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
+    echo ${APINAME}:${DOCKER_PORT}
+	response=$(curl -s http://localhost:${DOCKER_PORT}/apis/nodes/$(echo ${APINAME})/healthcheck/health)
 	body=$(echo "$response")
-	message=$(echo "$response" | jq -r '.message')   # -r para quitar las comillas
 	status=$(echo "$response" | jq -r '.status')
-	
 	echo "status: $status"
-	echo $message | jq '.'
+	echo $body | jq .
 
 fi
+
+#--------------------------------------------------------------------------------------
+
 
 if [ "$1" == "env" ]; then
 
@@ -355,9 +399,8 @@ if [ "$1" == "env" ]; then
         echo "Variables permitidas: ${VARS_PERMITIDAS[*]}"
         echo "${PURPLE}1) setenv${NC}: Configurar variables de entorno"
         echo "${PURPLE}2) getenv${NC}: Listar variables de entorno"
-        echo "${PURPLE}3) api env${NC}: Listar variables de entorno desde la API"
-        echo "${RED}4) exit${NC}"
-        read -p "Selecciona una opción [1-4]: " opcion
+        echo "${RED}3) exit${NC}"
+        read -p "select an option [1-3]: " opcion
 
         case $opcion in
             1)
@@ -377,22 +420,6 @@ if [ "$1" == "env" ]; then
                 
                 ;;
             3)
-				echo " _____ ____ _   _ ___" 
-				echo "| ___ |  _ \ | | /___)"
-				echo "| ____| | | \ V /___ |"
-				echo "|_____)_| |_|\_/(___/"             
-				
-					response=$(curl -s http://localhost:8000/apis/nodes/${APINAME}/healthcheck/env)
-					response=$(echo $response | sed 's/\n//g')
-					response=$(echo "$response" | jq -R '.' | jq -s '.' | jq -r 'join("")' )
-				
-				
-				    message=$(echo "$response" | jq -r '.message')
-					status=$(echo "$response" | jq -r '.status')
-					echo "status: $status"
-					echo "$message" | jq '.'
-                ;;
-            4)
                 echo "Saliendo..."
                 exit 0
                 ;;
@@ -403,24 +430,7 @@ if [ "$1" == "env" ]; then
  
 fi
 
-if [ "$1" == "properties" ]; then
-
-echo "▗▄▄▖ ▗▄▄▖  ▗▄▖ ▗▄▄▖  ▗▄▄▖"
-echo "▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌   "
-echo "▐▛▀▘ ▐▛▀▚▖▐▌ ▐▌▐▛▀▘  ▝▀▚▖"
-echo "▐▌   ▐▌ ▐▌▝▚▄▞▘▐▌   ▗▄▄▞"            
-
-	response=$(curl -s http://localhost:8000/apis/nodes/${APINAME}/healthcheck/props)
-	response=$(echo $response | sed 's/\n//g')
-	response=$(echo "$response" | jq -R '.' | jq -s '.' | jq -r 'join("")' )
-
-
-    message=$(echo "$response" | jq -r '.message')
-	status=$(echo "$response" | jq -r '.status')
-	echo "status: $status"
-	echo "$message" | jq '.'
-
-fi
+#--------------------------------------------------------------------------------------
 
 if [ "$1" == "keygen" ]; then
 
@@ -451,7 +461,7 @@ version="latest"  # o "RELEASE", "LATEST"
     echo "${PURPLE}4) HEX Message ${NC}: Generate HEX message"
     echo "${PURPLE}5) HEX/3DES Message ${NC}: Generate HEX/3DES message"
     echo "${RED}6) exit${NC}"
-    read -p "Selecciona una opción [1-4]: " opcion
+    read -p "select an option [1-4]: " opcion
 
     case $opcion in
             1)
@@ -460,6 +470,13 @@ version="latest"  # o "RELEASE", "LATEST"
 			         java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "3DES" ${security_dir}/$keygen_dir 256
 			         echo "${GREEN}success $2 crypto file${NC}"
 			         rm -f "${security_dir}/${artifact_id}-${version}.jar"
+			         
+			         read -p "define room key Y/n " key
+			         if [ "$key" = "Y" ] || [ "$key" = "y" ]; then
+			              cp ${security_dir}/$keygen_dir/*_3DES_PUB.pem ${security_dir}/$keygen_dir/jwt.pem
+			              ecosystem
+			         fi
+			         			         
 			         exit 0
 			    fi            
                 ;;
@@ -479,7 +496,7 @@ version="latest"  # o "RELEASE", "LATEST"
 				    echo "${PURPLE}2) SHA-384${NC}"
 				    echo "${PURPLE}3) SHA-512 ${NC}"
 				    echo "${RED}4) exit${NC}"
-				    read -p "Selecciona una opción [1-4]: " opcion2
+				    read -p "select an option [1-4]: " opcion2
 	                
 	                if [ $opcion2 = 1 ]; then
 			                    read -p "Message Payload: " PAYLOAD
@@ -535,6 +552,8 @@ version="latest"  # o "RELEASE", "LATEST"
 				
 fi
 
+#--------------------------------------------------------------------------------------
+
 
 if [ "$1" == "ssl" ]; then
 
@@ -563,7 +582,7 @@ if [ "$1" == "ssl" ]; then
         echo "${PURPLE}2) mkcert${NC}: Genera certifiado local usando mkcert"
         echo "${PURPLE}3) ver keystore${NC}: Lista de certificados cargados"
         echo "${RED}4) exit${NC}"
-        read -p "Selecciona una opción [1-4]: " opcion
+        read -p "select an option [1-4]: " opcion
 
         case $opcion in
             1)
@@ -586,23 +605,226 @@ if [ "$1" == "ssl" ]; then
 
 fi
 
+#--------------------------------------------------------------------------------------
+
+
 if [ "$1" == "docker" ]; then
 
+echo "${BLUE}          ##             .${NC}"
+echo "${BLUE}       ## ## ##        ^   ^ ${NC}"
+echo "${BLUE}     ## ## ## ## ##    \ v  /${NC}"
+echo "${BLUE}   /'''''''''''''''\___/   /${NC}"
+echo "${BLUE}  (                       /-${NC}"
+echo "${BLUE}   \______ o           __/${NC}"
+echo "${BLUE}     \    \         __/${NC}"
+echo "${BLUE}      \____\_______/${NC}"
+echo ""
+echo "${BLUE} d  o  c  k  e  r${NC}"
 
-	if [ -z "$APINAME" ]; then
-	    echo "${RED}✗ Env APINAME no está configurada${NC}"
+
+	 if [ -z "$ENVIRONMENT" ]; then
+	    echo "${RED}✗ Env ENVIRONMENT no está configurada${NC}"
 	    exit 1
-	else
-	
-	    if [ -f dockerfile ]; then
-			    docker build -t apiseries-api-${APINAME} .
-		else
-		    echo "Dockerfile not found"
-		fi
-	fi
+     fi
+
+     echo "${RED}Are you sure about creating a container? (Y/n)${NC}"
+     read -r respuesta
+     if [ "$respuesta" = "n" ] || [ "$respuesta" = "N" ]; then
+         exit 0
+     fi
+        
+     DOCKER_PORT=`grep 'port:' $conf_dir/gear-server.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
+     APINAME=`grep 'name:' $conf_dir/gear-security.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
+     export APINAME=$APINAME
+	 
+#	 sed -i -E 's/^(ENV APINAME=).*/\1$APINAME/' dockerfile
+#	 sed -i -E 's/^(ENV APP_PORT=).*/\1"$DOCKER_PORT"/' dockerfile
+#	 sed -i -E 's/^(ENV ENVIRONMENT=).*/\1$ENVIRONMENT/' dockerfile
+# VERIFICAR OS para aplicar comandos nativos
+	 
+	 sed -E -i '' "s/^(ENV APINAME=).*/\1$APINAME/" dockerfile
+	 sed -E -i '' "s/^(ENV APP_PORT=).*/\1\"$DOCKER_PORT\"/" dockerfile
+	 sed -E -i '' "s/^(ENV ENVIRONMENT=).*/\1$ENVIRONMENT/" dockerfile
+	 
+     DOCKER_INSTANCE=`docker ps | grep apiseries-api-${APINAME}:latest | awk -F ' ' '{print $1}'`
+     if [ "$DOCKER_INSTANCE" != "" ]; then
+          
+          docker stop $DOCKER_INSTANCE
+          if [ $? -eq 0 ]; then
+               DOCKER_IMAGE=`docker images | grep apiseries-api-${APINAME} | awk -F ' ' '{print $3}'`
+               if [ "$DOCKER_IMAGE" != "" ]; then
+	               docker rm $DOCKER_INSTANCE 
+	               docker rmi $DOCKER_IMAGE
+	           
+	               sleep 5    
+	               if [ $? -eq 0 ]; then
+	               
+	               	    if [ -f dockerfile ]; then
+						    docker build -t apiseries-api-${APINAME} .
+						    
+     				        #read -p "${GREEN}✓ docker port:${NC} " port
+					        docker run -d --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
+						else
+						    echo "${RED}✗ Dockerfile not found${NC}"
+						fi
+	               fi 
+	           else
+	               	    if [ -f dockerfile ]; then
+						    docker build -t apiseries-api-${APINAME} .
+
+     				        #read -p "${GREEN}✓ docker port:${NC} " port
+					        docker run -d --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
+						else
+						    echo "${RED}✗ Dockerfile not found${NC}"
+						fi
+	           fi    
+          fi
+     
+     else
+        echo "${RED}✗ docker is not run...${NC}"
+        DOCKER_INSTANCE=`docker ps -a --filter "status=exited" | grep apiseries-api-${APINAME}:latest | awk -F ' ' '{print $1}'`
+        if [ "$DOCKER_INSTANCE" != "" ]; then
+            docker rm $DOCKER_INSTANCE 
+        fi
+        
+        
+        DOCKER_IMAGE=`docker images | grep apiseries-api-${APINAME} | awk -F ' ' '{print $3}'`
+        if [ "$DOCKER_IMAGE" != "" ]; then
+               docker rmi $DOCKER_IMAGE
+               sleep 5    
+               if [ $? -eq 0 ]; then
+               
+               	    if [ -f dockerfile ]; then
+					    docker build -t apiseries-api-${APINAME} .
+  				        
+     				        #read -p "${GREEN}✓ docker port:${NC} " port
+					        docker run -d --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
+					else
+					    echo "${RED}✗ Dockerfile not found${NC}"
+					fi
+               fi 
+         else
+         
+               	    if [ -f dockerfile ]; then
+					    docker build -t apiseries-api-${APINAME} .
+  				        
+     				        #read -p "${GREEN}✓ docker port:${NC} " port
+					        docker run -d --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
+					else
+					    echo "${RED}✗ Dockerfile not found${NC}"
+					fi
+         
+         
+         fi
+     fi
 
 fi
 
+if [ "$1" == "docker-log" ]; then
+
+    docker logs -f apiseries-api-${APINAME}
+        
+fi
+
+if [ "$1" == "docker-status" ]; then
+
+echo "${BLUE}          ##             .${NC}"
+echo "${BLUE}       ## ## ##        ^   ^ ${NC}"
+echo "${BLUE}     ## ## ## ## ##    \ v  /${NC}"
+echo "${BLUE}   /'''''''''''''''\___/   /${NC}"
+echo "${BLUE}  (                       /-${NC}"
+echo "${BLUE}   \______ o           __/${NC}"
+echo "${BLUE}     \    \         __/${NC}"
+echo "${BLUE}      \____\_______/${NC}"
+echo ""
+echo "${BLUE} d  o  c  k  e  r${NC}"
+echo ""
+
+
+	ID=`docker ps | grep apiseries-api-${APINAME}:latest | awk -F ' ' '{print $1}'`
+    if [ "$ID" = "" ];then
+
+        ID=`docker ps -a --filter "status=exited" | grep apiseries-api-${APINAME}:latest | awk -F ' ' '{print $1}'`
+		NAME=`docker ps -a --filter "status=exited" | grep apiseries-api-${APINAME}:latest | awk -F ' ' '{print $2}'`
+	        
+	    echo "${ID} ${YELLOW}${NAME}${NC} ${RED}DOWN${NC}"    
+
+    else
+    
+		NAME=`docker ps | grep apiseries-api-${APINAME}:latest | awk -F ' ' '{print $2}'`
+	        
+	    echo "${ID} ${YELLOW}${NAME}${NC} ${GREEN}UP${NC}"   
+    
+    fi
+
+        
+fi
+
+if [ "$1" == "docker-inspect" ]; then
+echo "${BLUE}          ##             .${NC}"
+echo "${BLUE}       ## ## ##        ^   ^ ${NC}"
+echo "${BLUE}     ## ## ## ## ##    \ v  /${NC}"
+echo "${BLUE}   /'''''''''''''''\___/   /${NC}"
+echo "${BLUE}  (                       /-${NC}"
+echo "${BLUE}   \______ o           __/${NC}"
+echo "${BLUE}     \    \         __/${NC}"
+echo "${BLUE}      \____\_______/${NC}"
+echo ""
+echo "${BLUE} d  o  c  k  e  r${NC}"
+echo ""
+
+
+    docker image inspect apiseries-api-${APINAME}:latest
+        
+fi
+
+if [ "$1" == "docker-start" ]; then
+
+echo "${BLUE}          ##             .${NC}"
+echo "${BLUE}       ## ## ##        ^   ^ ${NC}"
+echo "${BLUE}     ## ## ## ## ##    \ v  /${NC}"
+echo "${BLUE}   /'''''''''''''''\___/   /${NC}"
+echo "${BLUE}  (                       /-${NC}"
+echo "${BLUE}   \______ o           __/${NC}"
+echo "${BLUE}     \    \         __/${NC}"
+echo "${BLUE}      \____\_______/${NC}"
+echo ""
+echo "${BLUE} d  o  c  k  e  r${NC}"
+echo ""
+
+    DOCKER_PORT=`grep 'port:' $conf_dir/gear-server.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
+    APINAME=`grep 'name:' $conf_dir/gear-security.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
+    export APINAME=$APINAME
+
+    docker start apiseries-api-${APINAME}
+        
+fi
+
+if [ "$1" == "docker-stop" ]; then
+
+echo "${BLUE}          ##             .${NC}"
+echo "${BLUE}       ## ## ##        ^   ^ ${NC}"
+echo "${BLUE}     ## ## ## ## ##    \ v  /${NC}"
+echo "${BLUE}   /'''''''''''''''\___/   /${NC}"
+echo "${BLUE}  (                       /-${NC}"
+echo "${BLUE}   \______ o           __/${NC}"
+echo "${BLUE}     \    \         __/${NC}"
+echo "${BLUE}      \____\_______/${NC}"
+echo ""
+echo "${BLUE} d  o  c  k  e  r${NC}"
+echo ""
+
+    DOCKER_PORT=`grep 'port:' $conf_dir/gear-server.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
+    APINAME=`grep 'name:' $conf_dir/gear-security.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
+    export APINAME=$APINAME
+
+    docker stop apiseries-api-${APINAME}
+        
+fi
+
+
+
+#--------------------------------------------------------------------------------------
 
 
 if [ "$1" == "" ]; then
@@ -616,16 +838,26 @@ if [ "$1" == "" ]; then
         echo "sh gear.sh start|stop|run|status|health|env|properties|keygen|ssl|docker"
         echo ---
         echo ${GREEN}Options:${NC} 
-        echo "${PURPLE}start${NC}      : Start in service mode" 
+        echo "${PURPLE}start${NC}      : Start localhost in service mode" 
         echo "${PURPLE}stop${NC}       : Stop service"
-        echo "${PURPLE}run${NC}        : Start service in interactive mode"
+        echo "${PURPLE}run${NC}        : Start localhost service in interactive mode"
         echo "${PURPLE}status${NC}     : View process ID"
+        echo ""
+        echo ${GREEN}API Options:${NC}
         echo "${PURPLE}health${NC}     : Validate service status"
         echo "${PURPLE}env${NC}        : Environment variables"
-        echo "${PURPLE}properties${NC} : View properties"
         echo "${PURPLE}keygen${NC}     : Create PEM files for the following encryption types: 3DES, Asymmetric Hash"
         echo "${PURPLE}ssl${NC}        : Create SSL certificate (Keytool, MakeCert)"
-        echo "${PURPLE}docker${NC}     : Generate Docker Image"
+        echo ""
+        echo ${GREEN}Docker Options:${NC}
+        echo "${PURPLE}docker${NC}         : Generate Docker Image"
+        echo "${PURPLE}docker-start${NC}   : Docker start"
+        echo "${PURPLE}docker-stop${NC}    : Docker stop"
+        echo "${PURPLE}docker-log${NC}     : Docker logs"
+        echo "${PURPLE}docker-status${NC}  : Docker Status"
+        echo "${PURPLE}docker-inspect${NC} : Docker Image Inspect"
         echo 
+        
+        
 
 fi

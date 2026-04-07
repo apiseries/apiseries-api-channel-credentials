@@ -9,8 +9,8 @@ spec:
   rules:
   - http:
       paths:
-      - path: /(.*)
-        pathType: ImplementationSpecific
+      - path: /apis/nodes/channel-credentials
+        pathType: Exact
         backend:
           service:
             name: apiseries-api-channel-credentials

@@ -3,14 +3,19 @@ apis:
       channel-credentials: #debe ser modificado por el nombre real de la api
          method: GET
          active: true
-         classname: com.apiseries.api.sii.controller.Controller
+         classname: com.apiseries.api.channel.controller.Controller
+         classmethod: toEmit
          #PLAIN,HEX,XOR,ASIMETRIC,3DES,ASIMETRIC/HEX,3DES/HEX,ASIMETRIC/XOR,3DES/XOR 
          encrypted: PLAIN
          dependencies:
-            dependency:
-               name: geardb
+            - dependency:
+               name: gearconfig
                classname: com.gear.tools.xml.core.YAMLReader
                method: addDB
+            - dependency:
+               name: gearsecurity
+               classname: com.gear.tools.xml.core.YAMLReader
+               method: addSecurity
          healthcheck:
             health: true
             health-classname: com.gear.healthcheck.controller.Health

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.apiseries.api.constant;
+package com.apiseries.api.channel.constant;
 
 /**
  * 
