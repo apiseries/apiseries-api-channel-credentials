@@ -1,10 +1,10 @@
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM eclipse-temurin:21-jre-jammy AS runtime
 
 # Instalar solo lo mínimo necesario
-RUN apk add --no-cache tzdata curl \
-    && cp /usr/share/zoneinfo/America/Santiago /etc/localtime \
-    && echo "America/Santiago" > /etc/timezone \
-    && apk del tzdata
+#RUN apk add --no-cache tzdata curl \
+#    && cp /usr/share/zoneinfo/America/Santiago /etc/localtime \
+#    && echo "America/Santiago" > /etc/timezone \
+#    && apk del tzdata
 
 # ── Working directory ────────────────────────────────────────
 WORKDIR /app
