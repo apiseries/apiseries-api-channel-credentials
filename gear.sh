@@ -20,6 +20,11 @@ keygen_dir="keygen"
 ssl_dir="ssl"
 JWT=".jwt"
 
+DOCKER_MONGODB_IP=0.0.0.0
+DOCKER_QPID_IP=0.0.0.0
+DOCKER_KAFKA_IP=0.0.0.0
+DOCKER_REDIS_IP=0.0.0.0
+
 ENV_FLAG=0
 
 BOLD='\033[1m'
@@ -51,6 +56,7 @@ BG_WHITE_I='\033[107'
 NC='\033[0m'
 RESET="\e[0m"
 TCOL=$(tput cols)
+COL_MIDDLE=$((TCOL / 2))
 COL=$((TCOL - 2))
 COL_3=$((TCOL - 3))
 COL_4=$((TCOL - 4))
@@ -104,9 +110,12 @@ function java_version {
         printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "Java is not installed or is not in the PATH"
         printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
         exit 1
+        #view_status "Java" 1
+        
 	else
    	    JAVA_LINE=$(java -version 2>&1 | head -n 1)
         printf "${BG_GREEN}✓ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "Java: ${JAVA_LINE} is already installed"
+        #view_status "Java: ${JAVA_LINE}" 0
 	fi
 }
 
@@ -118,14 +127,37 @@ function ollama_version {
 
     # 1. Check if Java 21 is already installed
 	if ! command -v ollama &> /dev/null; then
-	
         printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "ollama not found. "
-	    
+        #view_status "ollama" 1
 	else
    	    OLLAMA_LINE=$(ollama --version 2>&1 | head -n 1)
         printf "${BG_GREEN}✓ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "Ollama: ${OLLAMA_LINE} is already installed"
-        		
+        #view_status "ollama: ${OLLAMA_LINE}" 0
 	fi
+}
+
+function fzf_version {
+
+	if ! command -v fzf &> /dev/null; then
+	    printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "fzf not found. "
+	else
+	    FZF_LINE=$(fzf --version 2>&1 | head -n 1)
+        printf "${BG_GREEN}✓ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "fzf: ${FZF_LINE} is already installed"
+	
+	fi
+
+}
+
+function whiptail_version {
+
+	if ! command -v whiptail &> /dev/null; then
+	    printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "whiptail not found. "
+	else
+	    WP_LINE=$(whiptail --version 2>&1 | head -n 1)
+        printf "${BG_GREEN}✓ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "whiptail: ${WP_LINE} is already installed"
+	
+	fi
+
 }
 
 function docker_version {
@@ -133,13 +165,75 @@ function docker_version {
 	if ! command -v docker &> /dev/null; then
 	    printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "docker not found. "
 	else
-	    DOCKER_LINE=$(sudo docker --version 2>&1 | head -n 1)
-        printf "${BG_GREEN}✓ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "Docker: ${DOCKER_LINE} is already installed"
+	    DOCKER_LINE=`sudo docker --version 2>&1 | head -n 1`
+        printf "${BG_GREEN}✓ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "Docker: ${DOCKER_LINE}is already installed"
 	
 	fi
 
 }
 
+function maven_version {
+
+	if ! command -v mvn &> /dev/null; then
+	    printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "maven not found. "
+	else
+	    MVN_LINE=`mvn --version 2>&1 | head -n 1`
+        printf "${BG_GREEN}✓ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "Maven: ${MVN_LINE} is already installed"
+	
+	fi
+}
+
+function external_version {
+
+    MONGODB=`grep 'mongodb:' $conf_dir/gear-config.yml | tail -n 1 | xargs`
+    QPID=`grep 'qpid' $conf_dir/gear-security.yml | tail -n 1 | xargs`
+    KAFKA=`grep 'kafka' $conf_dir/gear-security.yml | tail -n 1 | xargs`
+    REDIS= `grep 'redis' $conf_dir/gear-security.yml | tail -n 1 | xargs`
+
+    APPS=("nexus")
+    if [ "${MONGODB}" != "" ]; then APPS+=("mongodb"); fi 
+    if [ "${QPID}" != "" ]; then APPS+=("qpid"); fi 
+    if [ "${KAFKA}" != "" ]; then APPS+=("kafka"); fi 
+    if [ "${REDIS}" != "" ]; then APPS+=("redis"); fi 
+         
+    LIST=`sudo docker ps | tail -n +2 | awk -F ' ' 'BEGIN{OFS="_"}{print $1, $2}'`
+    DOCKERS=($LIST) 
+    
+    IS_ALIVE=false
+    for apps in "${APPS[@]}"; do
+		 for dock in "${DOCKERS[@]}"; do
+
+		     INDEXOF=`echo ${dock} | grep -o ${apps}`
+		     if [ "${INDEXOF}" != "" ]; then
+			     DOCKER_ID=`echo ${dock} | awk -F '_' '{print $1}'`
+			     #echo "nexus: ${DOCKER_ID}"
+	             IP=`sudo docker exec ${DOCKER_ID} hostname -i`
+			     #echo "nexus: ${IP}"
+			     IS_ALIVE=true
+			     
+             fi
+
+		 done
+		 
+		 if [ "${IS_ALIVE}" = "true" ]; then printf "${BG_GREEN}✓ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "docker ${apps} is online"; fi
+		 if [ "${IS_ALIVE}" = "false" ]; then printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "docker ${apps} is offline"; fi
+		 IS_ALIVE=false
+	done	 
+
+
+}
+
+
+function view_status {
+    local label=$1
+    local status=$2
+
+    if [ "$status" -eq 0 ]; then
+        printf "${BG_GREEN}✔ ${NC}$label "
+    else
+        printf "${BG_RED}✘ ${NC}$label "
+    fi
+}
 
 #
 # function: env
@@ -518,25 +612,30 @@ function main {
         echo "${BLUE} ▄█. .█▄ ${NC}"
         echo "${BLUE} ▀█ - █▀   g e a r  C L I ®${NC}"
         echo "${BLUE}   ▀ ▀   ${NC}" 
-        
-        
+
 
         
         APINAME=`grep 'name:' $conf_dir/gear-security.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
         DOCKER_PORT=`grep 'port:' $conf_dir/gear-server.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
         echo
         printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
+		if [ "$(id -u)" -ne 0 ]; then printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "This script must be run with sudo or as root"; fi
         printf "${BG_YELLOW}i ${NC}${BG_BLUE}${BOLD}%-${COL}s${RESET}\n" "APINAME: ${APINAME}"
         printf "${BG_YELLOW}i ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "LISTENER PORT: ${DOCKER_PORT}"
         printf "${BG_YELLOW}i ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "URL: http://localhost:${DOCKER_PORT}/apis/nodes/${APINAME}"
-		ollama_version
 		java_version
+		ollama_version
+		maven_version
+		fzf_version 
+		whiptail_version  
 		docker_version
-		if [ "$(id -u)" -ne 0 ]; then printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "This script must be run with sudo or as root"; fi
+		external_version
 		printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
         echo
 	
 }
+
+
 
 function help {
 	
@@ -566,6 +665,14 @@ function help {
        echo 
        echo ${CIAN}AI Options:${NC}
        echo "${BLUE}ai${NC}             : AI console"
+       echo
+       echo ${CIAN}Testing Options:${NC}
+       echo "${BLUE}scafold${NC}        : View Files for Project"
+       echo "${BLUE}jwt${NC}            : get Token JWT"
+       echo "${BLUE}apitest${NC}        : Test API call"
+       echo
+       echo ${CIAN}Maven Options:${NC}
+       echo "${BLUE}mvn-deploy${NC}     : Deploy Artifact to Nexus"
        echo
 
 }
@@ -750,7 +857,7 @@ function envconf {
 
 	        SELECCION=$(printf "%s\n" "${OPCIONES[@]}" | fzf \
 	        --prompt="filter > " \
-	        --header="↑↓ Browse | Type to filter | Enter to confirm | Ctrl+C cancel" \
+	        --header="↑↓ Browse | Type to filter | Enter to confirm | ESC to Exit" \
 	        --reverse \
 	        --height=40% \
 	        --layout=default \
@@ -758,7 +865,7 @@ function envconf {
 	        
 	        if [ $? -ne 0 ] || [ -z "$SELECCION" ]; then
 		        echo -e "Exiting..."
-		        exit 0
+		        
 	        fi
 	        
 	        case "$SELECCION" in
@@ -836,7 +943,7 @@ draw_line
 
         SELECTION=$(printf "%s\n" "${OPTIONS[@]}" | fzf \
         --prompt="filter > " \
-        --header="↑↓ Browse | Type to filter | Enter to confirm | Ctrl+C cancel" \
+        --header="↑↓ Browse | Type to filter | Enter to confirm | ESC to Exit" \
         --reverse \
         --height=40% \
         --layout=default \
@@ -844,7 +951,7 @@ draw_line
         
         if [ $? -ne 0 ] || [ -z "$SELECTION" ]; then
 	        echo -e "Exiting..."
-	        exit 0
+	        
         fi
 
 
@@ -862,6 +969,84 @@ draw_line
 		esac
 
 
+}
+
+function hash_menu {
+
+
+    draw_line
+
+    echo
+    echo "choose an encryption option"
+    echo "${BLUE}SHA-256 ${NC}"
+    echo "${BLUE}SHA-384${NC}"
+    echo "${BLUE}SHA-512 ${NC}"
+    echo "${BLUE}Return ${NC}"
+    
+
+    OPTIONS=(
+	 SHA-256
+     SHA-384
+     SHA-512
+     RETURN
+   )
+
+    SELECTION=$(printf "%s\n" "${OPTIONS[@]}" | fzf \
+    --prompt="filter > " \
+    --header="↑↓ Browse | Type to filter | Enter to confirm | ESC to Exit" \
+    --reverse \
+    --height=40% \
+    --layout=default \
+    --color=pointer:2)
+    
+    if [ $? -ne 0 ] || [ -z "$SELECTION" ]; then
+        echo -e "Exiting..."
+    fi
+
+	case "$SELECTION" in
+
+        "SHA-256")
+            echo
+            PAYLOAD=$(whiptail --title "Paylod for Hash Message" --inputbox "Write to Payload:" 8 40 3>&1 1>&2 2>&3)
+            mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
+		    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
+		         HASH=`java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "HASH" "SHA-256" ${security_dir}/$keygen_dir $PAYLOAD`
+                 echo "HASH=${HASH}" >> ${JWT}	         
+	             printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
+ 			     printf "${BG_GREEN}✓ ${NC}${BG_BLUE}${BOLD}%-${COL}s${RESET}\n" "Hash successfully created. The hash will be saved for future use."
+			     printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
+		         
+		         rm -f "${security_dir}/$keygen_dir/${artifact_id}-${version}.jar"
+		    fi            
+        ;;
+        "SHA-384")	
+            echo	
+            PAYLOAD=$(whiptail --title "Paylod for Hash Message" --inputbox "Write to Payload:" 8 40 3>&1 1>&2 2>&3)
+			mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
+		    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
+		         HASH=`java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "HASH" "SHA-384" ${security_dir}/$keygen_dir $PAYLOAD`
+                 echo "HASH=${HASH}" >> ${JWT}		         
+		         echo "${GREEN}success $2 crypto file${NC}"
+		         rm -f "${security_dir}/$keygen_dir/${artifact_id}-${version}.jar"
+		    fi
+        ;;
+        "SHA-512")
+            echo
+            PAYLOAD=$(whiptail --title "Paylod for Hash Message" --inputbox "Write to Payload:" 8 40 3>&1 1>&2 2>&3)
+			mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
+		    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
+		         HASH=`java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "HASH" "SHA-512" ${security_dir}/$keygen_dir $PAYLOAD`
+                 echo "HASH=${HASH}" >> ${JWT}		         
+		         echo "${GREEN}success $2 crypto file${NC}"
+		         rm -f "${security_dir}/$keygen_dir/${artifact_id}-${version}.jar"
+		    fi            
+        ;;
+        "RETURN")
+            clean
+            security
+        ;;
+
+    esac
 }
 
 
@@ -898,6 +1083,7 @@ version="latest"  # o "RELEASE", "LATEST"
     echo "${BLUE} HASH ${NC}: Generate a message hash"
     echo "${BLUE} HEX Message ${NC}: Generate HEX message"
     echo "${BLUE} HEX/3DES Message ${NC}: Generate HEX/3DES message"
+    echo "${BLUE} RETURN ${NC}"
  
  
         OPTIONS=(
@@ -906,11 +1092,12 @@ version="latest"  # o "RELEASE", "LATEST"
          HASH
          HEXtoMESS
          HEX3DEStoMESS
+         RETURN
        )
 
         SELECTION=$(printf "%s\n" "${OPTIONS[@]}" | fzf \
         --prompt="filter > " \
-        --header="↑↓ Browse | Type to filter | Enter to confirm | Ctrl+C cancel" \
+        --header="↑↓ Browse | Type to filter | Enter to confirm | ESC to Exit" \
         --reverse \
         --height=40% \
         --layout=default \
@@ -918,34 +1105,14 @@ version="latest"  # o "RELEASE", "LATEST"
         
         if [ $? -ne 0 ] || [ -z "$SELECTION" ]; then
 	        echo -e "Exiting..."
-	        exit 0
         fi
 
 
 		case "$SELECTION" in
 	
-            "keytool")
-                javakeytool
-                ;;
-            "mkcert")
-                mkcert                
-                ;;
-            "keystore")
-                keystore
-                ;;
-		esac
-
-
-
-
-
- 
-    read -p "select an option [1-6]: " opcion
-
-    case $opcion in
-            1)
-                echo
+            "3DES")
                 
+                echo
                 rm -f ${security_dir}/$keygen_dir/*_3DES_PUB.pem
 				mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
 			    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
@@ -959,88 +1126,35 @@ version="latest"  # o "RELEASE", "LATEST"
 			              cp ${security_dir}/${keygen_dir}/*_3DES_PUB.pem "${security_dir}/${keygen_dir}/jwt.pem"
 			              ecosystem
 			         fi
-			         			         
-			         exit 0
-			    fi            
-                ;;
-            2)
+		       fi            
+            ;;
+
+            "ASYMETRIC")
                 echo
 				mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
 			    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
 			         java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "ASIMETRIC" ${security_dir}/$keygen_dir
 			         echo "${GREEN}success $2 crypto file${NC}"
 			         rm -f "${security_dir}/${artifact_id}-${version}.jar"
-			         exit 0
-			    fi            
-                ;;
-            3)
-            
-                    draw_line
+ 	            fi            
+            ;;
 
-                    echo
-				    echo "choose an encryption option"
-				    echo "${BLUE}1) SHA-256 ${NC}"
-				    echo "${BLUE}2) SHA-384${NC}"
-				    echo "${BLUE}3) SHA-512 ${NC}"
-				    echo "${RED}4) exit${NC}"
-				    read -p "select an option [1-4]: " opcion2
-	                
-	                if [ $opcion2 = 1 ]; then
-			                    read -p "Message Payload: " PAYLOAD
-								mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
-							    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
-							         java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "HASH" "SHA-256" ${security_dir}/$keygen_dir $PAYLOAD
-							         echo "${GREEN}success $2 crypto file${NC}"
-							         rm -f "${security_dir}/$keygen_dir/${artifact_id}-${version}.jar"
-							         exit 0
-							    fi            
-			        fi
-	                if [ $opcion2 = 2 ]; then
-			                    read -p "Message Payload: " PAYLOAD
-								mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
-							    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
-							         java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "HASH" "SHA-384" ${security_dir}/$keygen_dir $PAYLOAD
-							         echo "${GREEN}success $2 crypto file${NC}"
-							         rm -f "${security_dir}/$keygen_dir/${artifact_id}-${version}.jar"
-							         exit 0
-							    fi
-				    fi			                
-	                if [ $opcion2 = 3 ]; then
-			                    read -p "Message Payload: " PAYLOAD
-								mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
-							    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
-							         java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "HASH" "SHA-512" ${security_dir}/$keygen_dir $PAYLOAD
-							         echo "${GREEN}success $2 crypto file${NC}"
-							         rm -f "${security_dir}/$keygen_dir/${artifact_id}-${version}.jar"
-							         exit 0
-							    fi            
-			        fi
-	                if [ $opcion2 = 4 ]; then
-  	                     echo "Exiting..."
-			             exit 0
-				    fi
-	
-                ;;
-            4)
+            "HASH")
+                hash_menu
+            ;;
+ 
+            "HEXtoMESS")
                 read -p "Message Payload: " PAYLOAD
                 echo -n "$PAYLOAD" | xxd -p
-               
-                ;;
-            5)
+                
+            ;;
+ 
+            "HEX3DEStoMESS")
+                
+            ;;
             
-                ;;    
-            6)
-                echo "Saliendo..."
-                exit 0
-                ;;
-    
-        esac
-
-
-	
-	
+		esac
 }
-
 
 
 
@@ -1070,7 +1184,9 @@ function docker {
 		          
 		          sudo docker stop $DOCKER_INSTANCE
 		          if [ $? -eq 0 ]; then
-		               DOCKER_IMAGE=`sudo docker images | grep apiseries-api-${APINAME} | awk -F ' ' '{print $3}'`
+		               DOCKER_IMAGE=`sudo docker images | grep apiseries-api-${APINAME} | awk -F ' ' '{print $2}' | awk '{print tolower($0)}'`
+		               echo ${DOCKER_IMAGE}
+		               
 		               if [ "$DOCKER_IMAGE" != "" ]; then
 			               sudo docker rm $DOCKER_INSTANCE 
 			               sudo docker rmi $DOCKER_IMAGE
@@ -1082,7 +1198,7 @@ function docker {
 								    sudo docker build -t apiseries-api-${APINAME} .
 								    
 		     				        #read -p "${GREEN}✓ docker port:${NC} " port
-							        sudo docker run -d --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
+							        sudo docker run -d --add-host="mongodb.apiseries.com:${DOCKER_MONGODB_IP}" --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
 								else
 								    echo "${RED}✗ Dockerfile not found${NC}"
 								fi
@@ -1092,7 +1208,7 @@ function docker {
 								    sudo docker build -t apiseries-api-${APINAME} .
 		
 		     				        #read -p "${GREEN}✓ docker port:${NC} " port
-							        sudo docker run -d --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
+							        sudo docker run -d --add-host="mongodb.apiseries.com:${DOCKER_MONGODB_IP}" --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
 								else
 								    echo "${RED}✗ Dockerfile not found${NC}"
 								fi
@@ -1108,11 +1224,13 @@ function docker {
 		        fi
 		        
 		        WARNING="WARNING: This output is designed for human readability. For machine-readable output, please use --format."
-		        DOCKER_IMAGE=`sudo docker images | grep apiseries-api-${APINAME} | awk -F ' ' '{print $3}'`
+		        DOCKER_IMAGE=`sudo docker images | grep apiseries-api-${APINAME} | awk -F ' ' '{print $2}' | awk '{print tolower($0)}'`
+		        echo ${DOCKER_IMAGE}
+		        
 		        if [[ "${DOCKER_IMAGE}" != "" ]] && [[ "${DOCKER_IMAGE}" != "${WARNING}" ]]; then
 		               echo "si existo"
 		               
-		               sudo docker rmi $DOCKER_IMAGE
+		               sudo docker rmi $DOCKER_IMAGE 
 		               sleep 5    
 		               if [ $? -eq 0 ]; then
 		               
@@ -1120,7 +1238,7 @@ function docker {
 							    sudo docker build -t apiseries-api-${APINAME} .
 		  				        
 		     				        #read -p "${GREEN}✓ docker port:${NC} " port
-							        sudo docker run -d --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
+							        sudo docker run -d --add-host="mongodb.apiseries.com:${DOCKER_MONGODB_IP}" --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
 							else
 							    echo "${RED}✗ Dockerfile not found${NC}"
 							fi
@@ -1130,7 +1248,7 @@ function docker {
 	               	    if [ -f dockerfile ]; then
   	               	        echo "dockerfile OK"
 						    sudo docker build -t apiseries-api-${APINAME} .
-					        sudo docker run -d --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
+					        sudo docker run -d --add-host="mongodb.apiseries.com:${DOCKER_MONGODB_IP}" --name apiseries-api-${APINAME} -p $DOCKER_PORT:$DOCKER_PORT apiseries-api-${APINAME}:latest
 						else
 						    echo "${RED}✗ Dockerfile not found${NC}"
 						fi
@@ -1197,7 +1315,7 @@ function docker_inspect {
     APINAME=`grep 'name:' $conf_dir/gear-security.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
     export APINAME=$APINAME
 
-    sudo docker image inspect apiseries-api-${APINAME}:latest
+    sudo docker image inspect apiseries-api-${APINAME}:latest | fzf
 
 echo        
 return
@@ -1265,7 +1383,7 @@ function docker_ifconfig {
     fi
 
     DOCKER_ID=`echo ${SELECTION} | awk -F '_' '{print $1}'`
-    IP=`sudo docker exec ${DOCKER_ID} hostname -I`
+    IP=`sudo docker exec ${DOCKER_ID} hostname -i`
     
     printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
     printf "${BG_GREEN}✓ ${NC}${BG_BLUE}${BOLD}%-${COL}s${RESET}\n" "${SELECTION} : ${IP}"
@@ -1305,52 +1423,114 @@ echo
 }
 
 function jwt {
+ 
+group_id="com.gear.keygen"
+artifact_id="gear-keygen"
+version="latest"  # o "RELEASE", "LATEST"
   
 _PORT=8000
-RESPONSE=`curl -s --request POST \
-  --url http://localhost:"${_PORT}"/apis/nodes/token \
-  --header 'Accept: application/json' \
-  --header 'Content-Gear-Hash: 6dd6e95a19321775781bc299172951e38a27ba2f0a1eba643e787fb1403492b581f524574cdcd565dc304ed806495ac8d0c5efbe4d649416e77ebe837c598c1f' \
-  --header 'Content-Type: application/json' \
-  --data '{"username":"gearcli","userid":"1234567","roles":["admin"]}'`
-run_with_spinner  
+
+	PAYLOAD=`echo '{"username":"gearcli","userid":"12345678","roles":["admin"]}' | jq -c '.'`
+    mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
+    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
+          HASH=`java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "jwt" "SHA-512" ${security_dir}/$keygen_dir ${PAYLOAD}`
+          rm -f "${security_dir}/$keygen_dir/${artifact_id}-${version}.jar"
+    fi            
+	
+    echo ${HASH}	
+	
+	RESPONSE=`curl -s --request POST \
+	  --url http://localhost:"${_PORT}"/apis/nodes/token \
+	  --header 'Accept: application/json' \
+	  --header "Content-Gear-Hash: ${HASH}" \
+	  --header 'Content-Type: application/json' \
+	  --data ${PAYLOAD}`
+	  
+	  
+	echo ${RESPONSE}  
+	run_with_spinner  
   
-HTTP_STATUS=$(echo "$RESPONSE" | jq -r '.status')
-
-if [ "$HTTP_STATUS" -eq 200 ]; then
-    TOKEN=$(echo "$RESPONSE" | jq -r '.accessToken')
-    REFRESH_TOKEN=$(echo "$RESPONSE" | jq -r '.refreshToken')
-
-    printf "${BG_GREEN}✓ ${NC}%-${COL}s${RESET}\n" "TOKEN: ${TOKEN}"
-    printf "${BG_GREEN}✓ ${NC}%-${COL}s${RESET}\n" "REFRESH TOKEN: ${REFRESH_TOKEN}"
-    
-    rm -f ${JWT}
-    echo "TOKEN=${TOKEN}" > ${JWT}
-    echo "REFRESH_TOKEN=${REFRESH_TOKEN}" >> ${JWT}
-    printf "${BG_GREEN}✓ ${NC}%-${COL}s${RESET}\n" "token saved for your session"
-    
-else
-    printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
-    printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "Error in request: $HTTP_STATUS"
-    printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
-
-    echo "Error en la petición: $HTTP_STATUS"
-fi 
+	HTTP_STATUS=$(echo "$RESPONSE" | jq -r '.status')
+	if [ "$HTTP_STATUS" -eq 200 ]; then
+	    TOKEN=$(echo "$RESPONSE" | jq -r '.accessToken')
+	    REFRESH_TOKEN=$(echo "$RESPONSE" | jq -r '.refreshToken')
+	
+	    printf "${BG_GREEN}✓ ${NC}%-${COL}s${RESET}\n" "TOKEN: ${TOKEN}"
+	    printf "${BG_GREEN}✓ ${NC}%-${COL}s${RESET}\n" "REFRESH TOKEN: ${REFRESH_TOKEN}"
+	    
+	    rm -f ${JWT}
+	    echo "TOKEN=${TOKEN}" > ${JWT}
+	    echo "REFRESH_TOKEN=${REFRESH_TOKEN}" >> ${JWT}
+	    printf "${BG_GREEN}✓ ${NC}%-${COL}s${RESET}\n" "token saved for your session"
+	    
+	else
+	    printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
+	    printf "${BG_RED}✗ ${NC}${BG_BLUE}%-${COL}s${RESET}\n" "Error in request: $HTTP_STATUS"
+	    printf "${BG_BLUE}${BOLD}%-${TCOL}s${RESET}\n" ""
+	
+	    echo "Error en la petición: $HTTP_STATUS"
+	fi 
+ 
   
 echo
 }
 
 function apitest {
 
-DOCKER_PORT=`grep 'port:' $conf_dir/gear-server.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
-curl s --request GET \
-  --url http://localhost:${DOCKER_PORT}/apis/nodes/channel-credentials \
-  --header 'Accept: application/json' \
-  --header 'Content-Gear-Hash: 032c79568a2f9e257ae504f770d0d46885cac0ee818294ea58561edf63b6136c53803d91187245302cbf7fb13f860c764cbd14298418059baa1dcc2deff794f8' \
-  --header 'Content-Type: application/json'
+group_id="com.gear.keygen"
+artifact_id="gear-keygen"
+version="latest"  # o "RELEASE", "LATEST"
+
+source ${JWT}
+
+	PAYLOAD=""
+	echo "payload: ${PAYLOAD}"
+    mvn dependency:copy -Dartifact=${group_id}:${artifact_id}:${version}:jar -DoutputDirectory=${security_dir}/${keygen_dir}
+    if [[ -n "$security_path/$keygen/${artifact_id}-${version}.jar" ]]; then
+          HASH=`java -Djava.security.manager=allow -Djava.security.properties=/dev/null -jar "$security_dir/$keygen_dir/${artifact_id}-${version}.jar" "jwt" "SHA-512" ${security_dir}/$keygen_dir ""`
+          rm -f "${security_dir}/$keygen_dir/${artifact_id}-${version}.jar"
+    fi            
+
+	DOCKER_PORT=`grep 'port:' $conf_dir/gear-server.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
+	RESPONSE=`curl -s --request GET \
+	  --url "http://localhost:${DOCKER_PORT}/apis/nodes/channel-credentials" \
+	  --header 'Accept: application/json' \
+	  --header "Content-Gear-Hash: 18020403ff37763e9a8006e053c3f068444a45c3b664bf2a05bda287eeaf91281dcd904a35911e6cf6a838b7b2f77d38d9d9f75c230dba3e5c0f79a3f7b333b5" \
+	  --header "Authorization: ${TOKEN}" \
+	  --header 'Content-Type: application/json'`
+      
+      echo "${RESPONSE}" | jq -r '.' | pbcopy
+      
+      draw_line
+      echo ${RESPONSE} | jq -r '.' | fzf \
+      --prompt="filter > " \
+	  --reverse \
+      --height=40% \
+      --layout=default \
+      --border=rounded \
+      --color=pointer:2
+      
+printf "${BG_GREEN}✓ ${NC}%-${COL}s${RESET}\n" "The answer has been copied to the clipboard."
+}
+
+
+function mvn_deploy {
+
+   mvn clean deploy
 
 }
 
+function mvn_compile {
+
+   mvn clean compile
+
+}
+
+function mvn_package {
+
+   mvn clean package
+
+}
 
 #
 #
@@ -1413,6 +1593,8 @@ if [ "$1" == "ai" ]; then ai; fi
 
 
 if [ "$1" == "" ]; then
+
+export export FZF_DEFAULT_OPTS="--height 60% --layout=reverse --border --margin=1 --padding=1 --info=inline --prompt='❯ ' --pointer='→' --marker='♡' --color='header:italic' --header='↑↓ Browse | Type to filter | Enter to confirm | Esc to Exit'"
 main        
         while true; do
 
@@ -1423,7 +1605,7 @@ main
              status
              health
              env
-             sec
+             security
              ssl
              docker
              docker-start
@@ -1436,6 +1618,9 @@ main
              scafold
              jwt
              apitest
+             mvn-deploy
+             mvn-compile
+             mvn-package
              help
            )
 
@@ -1459,7 +1644,7 @@ main
 	         "status") status;;
 	         "health") health;;
 	         "env") envconf;;
-	         "sec") security;;
+	         "security") security;;
 	         "ssl") ssl;;
 	         "docker") docker;;
 	         "docker-start") docker_start;;
@@ -1473,6 +1658,9 @@ main
 	         "scafold") navigate_directories;;
 	         "jwt") jwt;;
 	         "apitest") apitest;;
+	         "mvn-deploy") mvn_deploy;;
+	         "mvn-compile") mvn_compile;;
+	         "mvn-package") mvn_package;;
 	        esac
 	        
 	        read -rsn1 -p "Press any key to continue..."

@@ -1,18 +1,23 @@
 # Build artifacts
 build/
 out/
+gear-keygen-latest.jar
 
 # IDE
 .idea/
 .vscode/
 *.iml
+*.project
+*.
 
 # Git
 .git/
 .gitignore
 
 # Docs
+*.md
 README.md
+*.traineddata
 docs/
 
 # Tests

@@ -7,6 +7,10 @@ target/
 **/src/main/**/logs/**
 **/src/main/**/logs/archive/*.*
 **/src/main/resources/security/keygen/*.jar
+**/src/main/resources/security/keygen/*.pem
+*.jar
+*.pem
+.jwt
 
 ### STS ###
 .apt_generated
