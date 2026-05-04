@@ -613,7 +613,6 @@ function main {
         echo "${BLUE} ▀█ - █▀   g e a r  C L I ®${NC}"
         echo "${BLUE}   ▀ ▀   ${NC}" 
 
-
         
         APINAME=`grep 'name:' $conf_dir/gear-security.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
         DOCKER_PORT=`grep 'port:' $conf_dir/gear-server.yml | tail -n 1 | awk -F ':' '{print $2}' | xargs`
@@ -1395,12 +1394,23 @@ function ai {
 draw_line	
 echo "${BLUE}a i   c o n s o l e${NC}"
 echo
-    LIST=`curl -s https://ollama.com/library | grep '/library/' | awk -F ' ' '{print $2}' | sed 's/href="\/library//g'| sed 's/^.//;s/.$//'`
-    MODELS=($LIST) 
+
+claude_app=false
+kimi_app=false
+qwen_app=false
+IAS=()
+   
+    if ! command -v claude &> /dev/null; then IAS+=(claude); fi
+    if ! command -v kimi &> /dev/null; then IAS+=(kimi); fi
+    if ! command -v qwen &> /dev/null; then IAS+=(qwen); fi
+
+    MODELS=(haiku sonet opus)
+    #LIST=`curl -s https://ollama.com/library | grep '/library/' | awk -F ' ' '{print $2}' | sed 's/href="\/library//g'| sed 's/^.//;s/.$//'`
+    #MODELS=($LIST) 
     
 	echo ${CIAN}ENV Options:${NC}
 	for item in "${MODELS[@]}"; do
-       echo "${BLUE}$item${NC}: $item local mode"
+       echo "${BLUE}$item${NC}: $item model"
     done
 	echo
 
@@ -1417,9 +1427,82 @@ echo
         exit 0
     fi
     
-    sudo ollama run ${SELECTION}:cloud
+    ai_console ${SELECTION}
  
 echo
+}
+
+function ai_console {
+
+  draw_line 
+  sudo claude --model $1
+
+}
+
+function ai_skill {
+
+
+draw_line	
+echo "${BLUE}a i   c o n s o l e   s k i l l   c r e a t o r${NC}"
+echo
+
+
+# Ruta objetivo
+SKILLS=()
+
+	for archivo in .claude/skills/*; do
+	    SKILLS+=( "$(basename "$archivo")" )
+	done
+
+    SELECTION=$(printf "%s\n" "${SKILLS[@]}" | fzf \
+    --prompt="filter > " \
+    --header="↑↓ Browse | Type to filter | Enter to confirm | ESC to Exit" \
+    --reverse \
+    --height=40% \
+    --layout=default \
+    --color=pointer:2)
+    
+    if [ $? -ne 0 ] || [ -z "$SELECTION" ]; then
+        echo -e "Exiting..."
+        
+    fi
+
+    vim .claude/skills/${SELECTION}/SKILL.md
+
+	
+}
+
+function ai_agent {
+
+
+draw_line	
+echo "${BLUE}a i   c o n s o l e   s k i l l   c r e a t o r${NC}"
+echo
+
+
+# Ruta objetivo
+SKILLS=()
+
+	for archivo in .claude/agents/*; do
+	    SKILLS+=( "$(basename "$archivo")" )
+	done
+
+    SELECTION=$(printf "%s\n" "${SKILLS[@]}" | fzf \
+    --prompt="filter > " \
+    --header="↑↓ Browse | Type to filter | Enter to confirm | ESC to Exit" \
+    --reverse \
+    --height=40% \
+    --layout=default \
+    --color=pointer:2)
+    
+    if [ $? -ne 0 ] || [ -z "$SELECTION" ]; then
+        echo -e "Exiting..."
+        
+    fi
+
+    vim .claude/skills/${SELECTION}/SKILL.md
+
+	
 }
 
 function jwt {
@@ -1536,69 +1619,14 @@ function mvn_package {
 #
 # localhost Options --------------------------------------------------------------------------------------
 #
-#
+function init {
 
-
-#
-# localhost execution options
-# options: start | stop | status | run  
-# 
-# start: Start localhost in service mode
-# stop: Stop service
-# status: Start localhost service in interactive mode
-# run: View process ID
-#
-#
-
-if [ "$1" == "start" ]; then start; fi
-if [ "$1" == "stop" ]; then stop; fi
-if [ "$1" == "status" ]; then status; fi
-if [ "$1" == "run" ]; then run; fi
-
-#
-#
-# API Options --------------------------------------------------------------------------------------
-#
-#
-#
-# Functions execution options
-# options: health | env | keygen | ssl  
-# 
-# health: Validate service status
-# env: Environment variables [getenv | setenv | identify]
-# keygen: Create PEM files for the following encryption types: 3DES, Asymmetric Hash
-# ssl: Create SSL certificate (Keytool, MakeCert)
-#
-#
-
-if [ "$1" == "health" ]; then health; fi
-if [ "$1" == "env" ]; then envconf; fi
-if [ "$1" == "sec" ]; then security;fi
-if [ "$1" == "ssl" ]; then ssl; fi
-
-#
-#
-# DOCKER --------------------------------------------------------------------------------------
-#
-#
-
-if [ "$1" == "docker" ]; then docker; fi
-if [ "$1" == "docker-log" ]; then docker_log; fi
-if [ "$1" == "docker-status" ]; then docker_status; fi
-if [ "$1" == "docker-inspect" ]; then docker_inspect; fi
-if [ "$1" == "docker-start" ]; then docker_start; fi
-if [ "$1" == "docker-stop" ]; then docker_stop; fi
-if [ "$1" == "ai" ]; then ai; fi
-#--------------------------------------------------------------------------------------
-
-
-if [ "$1" == "" ]; then
-
-export export FZF_DEFAULT_OPTS="--height 60% --layout=reverse --border --margin=1 --padding=1 --info=inline --prompt='❯ ' --pointer='→' --marker='♡' --color='header:italic' --header='↑↓ Browse | Type to filter | Enter to confirm | Esc to Exit'"
+#export FZF_DEFAULT_OPTS="--height 60% --layout=reverse --border --margin=1 --padding=1 --info=inline --prompt='❯ ' --pointer='→' --marker='♡' --color='header:italic' --header='↑↓ Browse | Type to filter | Enter to confirm | Esc to Exit'"
 main        
         while true; do
 
            OPCIONES=(
+             refresh
 			 start
              stop
              run
@@ -1615,6 +1643,8 @@ main
              docker-inspect
              docker-ifconfig
              ai
+             ai-subagent
+             ai-skill
              scafold
              jwt
              apitest
@@ -1654,6 +1684,7 @@ main
 	         "docker-inspect") docker_inspect;;
 	         "docker-ifconfig") docker_ifconfig;;
 	         "ai") ai;;
+	         "ai-skill") ai_skill;;
 	         "help") help;;
 	         "scafold") navigate_directories;;
 	         "jwt") jwt;;
@@ -1661,12 +1692,60 @@ main
 	         "mvn-deploy") mvn_deploy;;
 	         "mvn-compile") mvn_compile;;
 	         "mvn-package") mvn_package;;
+	         "refresh") init;;
 	        esac
 	        
 	        read -rsn1 -p "Press any key to continue..."
 	        main
 	        echo
         done
-fi
+
+}
+
+
+#
+# localhost execution options
+# options: start | stop | status | run  
+# 
+# start: Start localhost in service mode
+# stop: Stop service
+# status: Start localhost service in interactive mode
+# run: View process ID
+#
+#
+
+if [ "$1" == "start" ]; then start; fi
+if [ "$1" == "stop" ]; then stop; fi
+if [ "$1" == "status" ]; then status; fi
+if [ "$1" == "run" ]; then run; fi
+
+#
+#
+# API Options --------------------------------------------------------------------------------------
+#
+#
+#
+# Functions execution options
+# options: health | env | keygen | ssl  
+# 
+# health: Validate service status
+# env: Environment variables [getenv | setenv | identify]
+# keygen: Create PEM files for the following encryption types: 3DES, Asymmetric Hash
+# ssl: Create SSL certificate (Keytool, MakeCert)
+#
+#
+
+if [ "$1" == "health" ]; then health; fi
+if [ "$1" == "env" ]; then envconf; fi
+if [ "$1" == "sec" ]; then security;fi
+if [ "$1" == "ssl" ]; then ssl; fi
+if [ "$1" == "docker" ]; then docker; fi
+if [ "$1" == "docker-log" ]; then docker_log; fi
+if [ "$1" == "docker-status" ]; then docker_status; fi
+if [ "$1" == "docker-inspect" ]; then docker_inspect; fi
+if [ "$1" == "docker-start" ]; then docker_start; fi
+if [ "$1" == "docker-stop" ]; then docker_stop; fi
+if [ "$1" == "ai" ]; then ai; fi
+if [ "$1" == "" ]; then init; fi
 
 

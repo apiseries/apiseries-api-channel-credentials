@@ -10,6 +10,7 @@ target/
 **/src/main/resources/security/keygen/*.pem
 *.jar
 *.pem
+.apiseries.p12
 .jwt
 
 ### STS ###
